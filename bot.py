@@ -81,13 +81,13 @@ def show_help(message):
 def check_answer(message):
     chat_id = message.chat.id
     if chat_id not in games:
-        bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start")
+        bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start", reply_markup=create_keyboard())
         return
     game = games[chat_id]
     try:
         user_answer = int(message.text)
     except ValueError:
-        bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.")
+        bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
         return
     if user_answer == game.current_answer:
         game.score += game.level * 10
@@ -98,7 +98,7 @@ def check_answer(message):
         message_text = f"✅ Правильно! Вы получаете {game.level * 10} очков.\n\n"
         message_text += update_game_message(chat_id)
         message_text += f"\n\n❓ Вопрос {game.total_questions}:\n{question}"
-        bot.reply_to(message, message_text)
+        bot.reply_to(message, message_text, reply_markup=create_keyboard())
     else:
         game.lives -= 1
         if game.lives == 0:
@@ -113,7 +113,7 @@ def check_answer(message):
             game.current_answer = answer
             game.total_questions += 1
             message_text += f"\n\n❓ Вопрос {game.total_questions}:\n{question}"
-            bot.reply_to(message, message_text)
+            bot.reply_to(message, message_text, reply_markup=create_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == '/start')
 def start_new_game(call):
