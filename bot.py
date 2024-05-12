@@ -28,66 +28,43 @@ import random
 def generate_question(level, difficulty):
     ops = ['+', '-', '*', '/']
     if difficulty == 'easy':
-        if level <= 3:
-            a, b = random.randint(1, 10), random.randint(1, 10)
+        if level <= 5:
+            a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
             op = '+'
-        elif level <= 6:
-            a, b = random.randint(1, 20), random.randint(1, 20)
-            op = '-'
-        elif level <= 9:
-            a, b = random.randint(1, 10), random.randint(1, 10)
-            op = '*'
+        elif level <= 10:
+            a, b = random.randint(1, 10 * (level - 5)), random.randint(1, 10 * (level - 5))
+            op = random.choice(['+', '*'])
         else:
-            a, b = random.randint(1, 100), random.randint(1, 10)
-            op = '/'
+            a, b = random.randint(1, 15 * (level - 10)), random.randint(1, 15 * (level - 10))
+            op = random.choice(['+', '*'])
     elif difficulty == 'medium':
-        if level <= 3:
-            a, b = random.randint(10, 100), random.randint(10, 100)
+        if level <= 5:
+            a, b = random.randint(1, 10 * level), random.randint(1, 10 * level)
             op = random.choice(['+', '-'])
-        elif level <= 6:
-            a, b = random.randint(1, 10), random.randint(1, 10)
-            op = random.choice(['*', '/'])
-        elif level <= 9:
-            a, b = random.randint(1, 100), random.randint(1, 10)
-            op = random.choice(['+', '-', '*', '/'])
+        elif level <= 10:
+            a, b = random.randint(1, 15 * (level - 5)), random.randint(1, 15 * (level - 5))
+            op = random.choice(['+', '-', '*'])
         else:
-            a = random.randint(1, 10)
-            b = random.randint(1, 10)
-            c = random.randint(1, 10)
-            op1 = random.choice(['+', '-'])
-            op2 = random.choice(['+', '-', '*', '/'])
-            question = f"{a} {op1} {b} {op2} {c}"
-            answer = eval(question)
-            return question, answer
+            a, b = random.randint(1, 20 * (level - 10)), random.randint(1, 20 * (level - 10))
+            op = random.choice(ops)
     else:  # difficulty == 'hard'
-        if level <= 3:
-            a, b = random.randint(100, 1000), random.randint(100, 1000)
-            op = random.choice(['+', '-'])
-        elif level <= 6:
-            a, b = random.randint(10, 100), random.randint(10, 100)
-            op = random.choice(['*', '/'])
-        elif level <= 9:
-            a, b, c = random.randint(1, 100), random.randint(1, 100), random.randint(1, 100)
-            op1, op2 = random.choice(ops), random.choice(ops)
-            question = f"{a} {op1} {b} {op2} {c}"
-            answer = eval(question)
-            return question, answer
+        if level <= 5:
+            a, b = random.randint(10 * level, 20 * level), random.randint(10 * level, 20 * level)
+            op = random.choice(['+', '-', '*'])
+        elif level <= 10:
+            a, b = random.randint(15 * (level - 5), 30 * (level - 5)), random.randint(15 * (level - 5), 30 * (level - 5))
+            op = random.choice(ops)
         else:
-            a, b, c, d = random.randint(1, 100), random.randint(1, 100), random.randint(1, 100), random.randint(1, 100)
-            op1, op2, op3 = random.choice(ops), random.choice(ops), random.choice(ops)
-            question = f"{a} {op1} {b} {op2} {c} {op3} {d}"
-            answer = eval(question)
-            return question, answer
+            a, b = random.randint(20 * (level - 10), 40 * (level - 10)), random.randint(20 * (level - 10), 40 * (level - 10))
+            op = random.choice(ops)
+        if op == '/':
+            a = a * b
     
     if op == '-' and b > a:
         a, b = b, a
-    elif op == '/' and b == 0:
-        b = random.randint(1, 10)
     
     question = f"{a} {op} {b}"
     answer = eval(question)
-    if op == '/':
-        answer = round(answer, 2)
     return question, answer
 
 def update_game_message(chat_id):
