@@ -46,12 +46,13 @@ def update_game_message(chat_id):
     hint_emoji = '💡'
     lives_text = heart_emoji * game.lives
     hints_text = hint_emoji * (3 - game.hints_used)
-    message = f"{lives_text} {hints_text} 🌟 {game.score}"
+    message = f"{lives_text}\n{hints_text}\n🌟 Очки: {game.score}"
     return message
 
 def create_keyboard():
     keyboard = InlineKeyboardMarkup()
-    keyboard.row(InlineKeyboardButton("Новая игра", callback_data='/start'), InlineKeyboardButton("Подсказка", callback_data='/hint'))
+    keyboard.row(InlineKeyboardButton("Новая игра", callback_data='/start'),
+                 InlineKeyboardButton("Подсказка", callback_data='/hint'))
     return keyboard
 
 @bot.message_handler(commands=['start'])
@@ -84,6 +85,8 @@ def start_game_questions(message):
     games[chat_id].current_answer = answer
     games[chat_id].total_questions += 1
     games[chat_id].question_start_time = time.time()
+    stats_message = bot.send_message(chat_id, update_game_message(chat_id), reply_markup=create_keyboard())
+    bot.pin_chat_message(chat_id, stats_message.message_id)
     bot.send_message(chat_id, f"❓ Вопрос {games[chat_id].total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
 
 @bot.message_handler(func=lambda message: True)
@@ -94,28 +97,39 @@ def check_answer(message):
         return
     game = games[chat_id]
     answer_time = time.time() - game.question_start_time
-    try:
-        user_answer = int(message.text)
-    except ValueError:
-        bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
-        return
     if answer_time > 12:
         game.lives -= 1
+        try:
+            user_answer = int(message.text)
+            if user_answer == game.current_answer:
+                answer_correct = "✅ Ваш ответ был правильным, но время истекло."
+            else:
+                answer_correct = "❌ Ваш ответ был неверным, и время истекло."
+        except ValueError:
+            answer_correct = "❌ Вы не ввели целочисленный ответ, и время истекло."
+        
+        message_text = f"{answer_correct} Вы теряете жизнь.\n\nПравильный ответ: {game.current_answer}\n\n"
+        message_text += update_game_message(chat_id)
+        bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
+        
         if game.lives == 0:
             message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
             message_text += f"📊 Итоговая статистика:\n\n🌟 Очки: {game.score}"
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             del games[chat_id]
         else:
-            message_text = f"❌ Время ответа истекло. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
-            message_text += update_game_message(chat_id)
-            bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             question, answer = generate_question(game.level, game.difficulty)
             game.current_answer = answer
             game.total_questions += 1
             game.question_start_time = time.time()
+            bot.edit_message_text(chat_id=chat_id, message_id=stats_message.message_id, text=update_game_message(chat_id), reply_markup=create_keyboard())
             bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
     else:
+        try:
+            user_answer = int(message.text)
+        except ValueError:
+            bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
+            return
         if user_answer == game.current_answer:
             score_multiplier = max(1, int(12 - answer_time))
             game.score += game.level * 10 * score_multiplier
@@ -128,22 +142,25 @@ def check_answer(message):
             game.current_answer = answer
             game.total_questions += 1
             game.question_start_time = time.time()
+            bot.edit_message_text(chat_id=chat_id, message_id=stats_message.message_id, text=update_game_message(chat_id), reply_markup=create_keyboard())
             bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
         else:
             game.lives -= 1
+            message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
+            message_text += update_game_message(chat_id)
+            bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
+            
             if game.lives == 0:
                 message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
                 message_text += f"📊 Итоговая статистика:\n\n🌟 Очки: {game.score}"
                 bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
                 del games[chat_id]
             else:
-                message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
-                message_text += update_game_message(chat_id)
-                bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
                 question, answer = generate_question(game.level, game.difficulty)
                 game.current_answer = answer
                 game.total_questions += 1
                 game.question_start_time = time.time()
+                bot.edit_message_text(chat_id=chat_id, message_id=stats_message.message_id, text=update_game_message(chat_id), reply_markup=create_keyboard())
                 bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
 
 @bot.callback_query_handler(func=lambda call: call.data == '/start')
@@ -160,6 +177,7 @@ def hint_callback(call):
     if game.hints_used < 3:
         game.hints_used += 1
         bot.answer_callback_query(callback_query_id=call.id, text=f"Подсказка: {game.current_answer}")
+        bot.edit_message_text(chat_id=chat_id, message_id=stats_message.message_id, text=update_game_message(chat_id), reply_markup=create_keyboard())
     else:
         bot.answer_callback_query(callback_query_id=call.id, text="У вас больше нет подсказок.")
 
