@@ -24,11 +24,11 @@ class Game:
 def generate_question(level, difficulty):
     ops = ['+', '-', '*']
     if difficulty == 'easy':
-        a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
+        a, b = random.randint(1, 2 * level), random.randint(1, 2 * level)
     elif difficulty == 'medium':
-        a, b = random.randint(5 * (level - 9), 10 * (level - 9)), random.randint(5 * (level - 9), 10 * (level - 9))
+        a, b = random.randint(2 * level, 4 * level), random.randint(2 * level, 4 * level)
     else:
-        a, b = random.randint(10 * (level - 19), 20 * (level - 19)), random.randint(10 * (level - 19), 20 * (level - 19))
+        a, b = random.randint(4 * level, 6 * level), random.randint(4 * level, 6 * level)
     op = random.choice(ops)
     question = f"{a} {op} {b}"
     answer = eval(question)
@@ -46,6 +46,7 @@ def create_keyboard():
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("Новая игра", callback_data='/start'))
     keyboard.add(InlineKeyboardButton("Правила и помощь", callback_data='/help'))
+    keyboard.add(InlineKeyboardButton("Подсказка", callback_data='/hint'))
     return keyboard
 
 @bot.message_handler(commands=['start'])
@@ -121,5 +122,29 @@ def start_new_game(call):
 @bot.callback_query_handler(func=lambda call: call.data == '/help')
 def show_help_inline(call):
     show_help(call.message)
+
+@bot.callback_query_handler(func=lambda call: call.data == '/hint')
+def hint_callback(call):
+    chat_id = call.message.chat.id
+    if chat_id not in games:
+        bot.answer_callback_query(callback_query_id=call.id, text="Пожалуйста, начните новую игру с помощью команды /start")
+        return
+    game = games[chat_id]
+    if game.hints_used < 3:
+        game.hints_used += 1
+        bot.answer_callback_query(callback_query_id=call.id, text=f"Подсказка: {game.current_answer}")
+    else:
+        bot.answer_callback_query(callback_query_id=call.id, text="У вас больше нет подсказок.")
+
+def hint_handler(message):
+    chat_id = message.chat.id
+    if chat_id not in games:
+        bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start")
+        return
+    hint_callback(message)
+
+@bot.message_handler(commands=['hint'])
+def handle_hint_command(message):
+    hint_handler(message)
 
 bot.polling()
