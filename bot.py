@@ -27,6 +27,16 @@ def generate_question(level, difficulty):
     ops = ['+', '-', '*', '/']
     if difficulty == 'easy':
         if level <= 5:
+            a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
+            op = '+'
+        elif level <= 10:
+            a, b = random.randint(1, 10 * (level - 5)), random.randint(1, 10 * (level - 5))
+            op = random.choice(['+', '*'])
+        else:
+            a, b = random.randint(1, 15 * (level - 10)), random.randint(1, 15 * (level - 10))
+            op = random.choice(['+', '*'])
+    elif difficulty == 'medium':
+        if level <= 5:
             a, b = random.randint(1, 10 * level), random.randint(1, 10 * level)
             op = random.choice(['+', '-'])
         elif level <= 10:
@@ -35,7 +45,7 @@ def generate_question(level, difficulty):
         else:
             a, b = random.randint(1, 20 * (level - 10)), random.randint(1, 20 * (level - 10))
             op = random.choice(ops)
-    elif difficulty == 'medium':
+    else:  # difficulty == 'hard'
         if level <= 5:
             a, b = random.randint(10 * level, 20 * level), random.randint(10 * level, 20 * level)
             op = random.choice(['+', '-', '*'])
@@ -45,20 +55,11 @@ def generate_question(level, difficulty):
         else:
             a, b = random.randint(20 * (level - 10), 40 * (level - 10)), random.randint(20 * (level - 10), 40 * (level - 10))
             op = random.choice(ops)
-            if op == '/':
-                a = a * b
-    else:  # difficulty == 'hard'
-        if level <= 5:
-            a, b = random.randint(20 * level, 40 * level), random.randint(20 * level, 40 * level)
-            op = random.choice(ops)
-        elif level <= 10:
-            a, b = random.randint(30 * (level - 5), 60 * (level - 5)), random.randint(30 * (level - 5), 60 * (level - 5))
-            op = random.choice(ops)
-        else:
-            a, b = random.randint(40 * (level - 10), 80 * (level - 10)), random.randint(40 * (level - 10), 80 * (level - 10))
-            op = random.choice(ops)
         if op == '/':
             a = a * b
+    
+    if op == '-' and b > a:
+        a, b = b, a
     
     question = f"{a} {op} {b}"
     answer = eval(question)
