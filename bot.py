@@ -93,13 +93,13 @@ def check_answer(message):
         game.score += game.level * 10
         if game.total_questions % 5 == 0:
             game.level += 1
+        message_text = f"✅ Правильно! Вы получаете {game.level * 10} очков.\n\n"
+        message_text += update_game_message(chat_id)
+        bot.reply_to(message, message_text, reply_markup=create_keyboard())
         question, answer = generate_question(game.level, game.difficulty)
         game.current_answer = answer
         game.total_questions += 1
-        message_text = f"✅ Правильно! Вы получаете {game.level * 10} очков.\n\n"
-        message_text += update_game_message(chat_id)
-        message_text += f"\n\n❓ Вопрос {game.total_questions}:\n{question}"
-        bot.reply_to(message, message_text, reply_markup=create_keyboard())
+        bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
     else:
         game.lives -= 1
         if game.lives == 0:
@@ -110,11 +110,11 @@ def check_answer(message):
         else:
             message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
             message_text += update_game_message(chat_id)
+            bot.reply_to(message, message_text, reply_markup=create_keyboard())
             question, answer = generate_question(game.level, game.difficulty)
             game.current_answer = answer
             game.total_questions += 1
-            message_text += f"\n\n❓ Вопрос {game.total_questions}:\n{question}"
-            bot.reply_to(message, message_text, reply_markup=create_keyboard())
+            bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
 
 @bot.callback_query_handler(func=lambda call: call.data == '/start')
 def start_new_game(call):
