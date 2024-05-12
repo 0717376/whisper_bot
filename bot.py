@@ -2,7 +2,7 @@ import os
 import random
 from dotenv import load_dotenv
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 import time
 
 load_dotenv()
@@ -42,13 +42,16 @@ def generate_question(level, difficulty):
 
 def update_game_message(chat_id):
     game = games[chat_id]
-    message = f"📊 Статистика игры:\n\n➡️ Вопрос: {game.total_questions}\n❤️ Жизни: {game.lives}\n🌟 Очки: {game.score}\n💡 Подсказки: {game.hints_used}/3"
+    heart_emoji = '❤️'
+    hint_emoji = '💡'
+    lives_text = heart_emoji * game.lives
+    hints_text = hint_emoji * (3 - game.hints_used)
+    message = f"{lives_text}\n{hints_text}\n🌟 Очки: {game.score}"
     return message
 
 def create_keyboard():
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("Новая игра", callback_data='/start'))
-    keyboard.add(InlineKeyboardButton("Правила и помощь", callback_data='/help'))
     keyboard.add(InlineKeyboardButton("Подсказка", callback_data='/hint'))
     return keyboard
 
@@ -67,19 +70,22 @@ def set_difficulty(call):
     difficulty = call.data
     games[chat_id] = Game(chat_id, difficulty)
     bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=f"Вы выбрали {difficulty} уровень сложности.")
-    rules = "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟). Чем быстрее вы отвечаете, тем больше очков получаете.\n- Если вы ошибаетесь или не отвечаете в течение 12 секунд, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nДавайте начнем! 😄"
-    bot.send_message(chat_id, rules, reply_markup=create_keyboard())
+    rules = "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟). Чем быстрее вы отвечаете, тем больше очков получаете.\n- Если вы ошибаетесь или не отвечаете в течение 12 секунд, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать."
+    start_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+    start_keyboard.add(KeyboardButton("Начать игру"))
+    bot.send_message(chat_id, rules, reply_markup=start_keyboard)
+
+@bot.message_handler(func=lambda message: message.text == "Начать игру")
+def start_game_questions(message):
+    chat_id = message.chat.id
+    if chat_id not in games:
+        bot.reply_to(message, "Пожалуйста, выберите уровень сложности с помощью команды /start", reply_markup=ReplyKeyboardRemove())
+        return
     question, answer = generate_question(games[chat_id].level, games[chat_id].difficulty)
     games[chat_id].current_answer = answer
     games[chat_id].total_questions += 1
     games[chat_id].question_start_time = time.time()
     bot.send_message(chat_id, f"❓ Вопрос {games[chat_id].total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
-
-@bot.message_handler(commands=['help'])
-def show_help(message):
-    chat_id = message.chat.id
-    help_text = "📜 Правила и помощь:\n\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟). Чем быстрее вы отвечаете, тем больше очков получаете.\n- Если вы ошибаетесь или не отвечаете в течение 12 секунд, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nЕсли у вас возникли вопросы, не стесняйтесь обращаться!"
-    bot.reply_to(message, help_text, reply_markup=create_keyboard())
 
 @bot.message_handler(func=lambda message: True)
 def check_answer(message):
@@ -93,7 +99,7 @@ def check_answer(message):
         game.lives -= 1
         if game.lives == 0:
             message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
-            message_text += f"📊 Итоговая статистика:\n\n➡️ Вопросов отвечено: {game.total_questions}\n🌟 Очки: {game.score}"
+            message_text += f"📊 Итоговая статистика:\n\n🌟 Очки: {game.score}"
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             del games[chat_id]
         else:
@@ -128,7 +134,7 @@ def check_answer(message):
             game.lives -= 1
             if game.lives == 0:
                 message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
-                message_text += f"📊 Итоговая статистика:\n\n➡️ Вопросов отвечено: {game.total_questions}\n🌟 Очки: {game.score}"
+                message_text += f"📊 Итоговая статистика:\n\n🌟 Очки: {game.score}"
                 bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
                 del games[chat_id]
             else:
@@ -144,10 +150,6 @@ def check_answer(message):
 @bot.callback_query_handler(func=lambda call: call.data == '/start')
 def start_new_game(call):
     start_game(call.message)
-
-@bot.callback_query_handler(func=lambda call: call.data == '/help')
-def show_help_inline(call):
-    show_help(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data == '/hint')
 def hint_callback(call):
