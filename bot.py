@@ -22,47 +22,73 @@ class Game:
         self.difficulty = difficulty
         self.hints_used = 0
         self.question_start_time = None
+        self.difficulty_level = 1 if difficulty == 'easy' else 2 if difficulty == 'medium' else 3
+
+import random
 
 def generate_question(level, difficulty):
     ops = ['+', '-', '*', '/']
     if difficulty == 'easy':
-        if level <= 5:
-            a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
+        if level <= 3:
+            a, b = random.randint(1, 10), random.randint(1, 10)
             op = '+'
-        elif level <= 10:
-            a, b = random.randint(1, 10 * (level - 5)), random.randint(1, 10 * (level - 5))
-            op = random.choice(['+', '*'])
+        elif level <= 6:
+            a, b = random.randint(1, 20), random.randint(1, 20)
+            op = '-'
+        elif level <= 9:
+            a, b = random.randint(1, 10), random.randint(1, 10)
+            op = '*'
         else:
-            a, b = random.randint(1, 15 * (level - 10)), random.randint(1, 15 * (level - 10))
-            op = random.choice(['+', '*'])
+            a, b = random.randint(1, 100), random.randint(1, 10)
+            op = '/'
     elif difficulty == 'medium':
-        if level <= 5:
-            a, b = random.randint(1, 10 * level), random.randint(1, 10 * level)
+        if level <= 3:
+            a, b = random.randint(10, 100), random.randint(10, 100)
             op = random.choice(['+', '-'])
-        elif level <= 10:
-            a, b = random.randint(1, 15 * (level - 5)), random.randint(1, 15 * (level - 5))
-            op = random.choice(['+', '-', '*'])
+        elif level <= 6:
+            a, b = random.randint(1, 10), random.randint(1, 10)
+            op = random.choice(['*', '/'])
+        elif level <= 9:
+            a, b = random.randint(1, 100), random.randint(1, 10)
+            op = random.choice(['+', '-', '*', '/'])
         else:
-            a, b = random.randint(1, 20 * (level - 10)), random.randint(1, 20 * (level - 10))
-            op = random.choice(ops)
+            a = random.randint(1, 10)
+            b = random.randint(1, 10)
+            c = random.randint(1, 10)
+            op1 = random.choice(['+', '-'])
+            op2 = random.choice(['+', '-', '*', '/'])
+            question = f"{a} {op1} {b} {op2} {c}"
+            answer = eval(question)
+            return question, answer
     else:  # difficulty == 'hard'
-        if level <= 5:
-            a, b = random.randint(10 * level, 20 * level), random.randint(10 * level, 20 * level)
-            op = random.choice(['+', '-', '*'])
-        elif level <= 10:
-            a, b = random.randint(15 * (level - 5), 30 * (level - 5)), random.randint(15 * (level - 5), 30 * (level - 5))
-            op = random.choice(ops)
+        if level <= 3:
+            a, b = random.randint(100, 1000), random.randint(100, 1000)
+            op = random.choice(['+', '-'])
+        elif level <= 6:
+            a, b = random.randint(10, 100), random.randint(10, 100)
+            op = random.choice(['*', '/'])
+        elif level <= 9:
+            a, b, c = random.randint(1, 100), random.randint(1, 100), random.randint(1, 100)
+            op1, op2 = random.choice(ops), random.choice(ops)
+            question = f"{a} {op1} {b} {op2} {c}"
+            answer = eval(question)
+            return question, answer
         else:
-            a, b = random.randint(20 * (level - 10), 40 * (level - 10)), random.randint(20 * (level - 10), 40 * (level - 10))
-            op = random.choice(ops)
-        if op == '/':
-            a = a * b
+            a, b, c, d = random.randint(1, 100), random.randint(1, 100), random.randint(1, 100), random.randint(1, 100)
+            op1, op2, op3 = random.choice(ops), random.choice(ops), random.choice(ops)
+            question = f"{a} {op1} {b} {op2} {c} {op3} {d}"
+            answer = eval(question)
+            return question, answer
     
     if op == '-' and b > a:
         a, b = b, a
+    elif op == '/' and b == 0:
+        b = random.randint(1, 10)
     
     question = f"{a} {op} {b}"
     answer = eval(question)
+    if op == '/':
+        answer = round(answer, 2)
     return question, answer
 
 def update_game_message(chat_id):
@@ -159,10 +185,21 @@ def check_answer(message):
             game.score += game.level * 10 * score_multiplier
             if game.total_questions % 5 == 0:
                 game.level += 1
+            
+            # Изменение сложности в зависимости от скорости ответа
+            if answer_time < 3:
+                if game.difficulty_level < 3:
+                    game.difficulty_level += 1
+            elif answer_time > 9:
+                if game.difficulty_level > 1:
+                    game.difficulty_level -= 1
+            
+            difficulty_text = 'легкий' if game.difficulty_level == 1 else 'средний' if game.difficulty_level == 2 else 'сложный'
             message_text = f"✅ Правильно! Вы получаете {game.level * 10 * score_multiplier} очков.\n\n"
+            message_text += f"Текущий уровень сложности: {difficulty_text}\n\n"
             message_text += update_game_message(chat_id)
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
-            question, answer = generate_question(game.level, game.difficulty)
+            question, answer = generate_question(game.level, game.difficulty_level)
             game.current_answer = answer
             game.total_questions += 1
             game.question_start_time = time.time()
@@ -178,7 +215,7 @@ def check_answer(message):
                 message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
                 message_text += update_game_message(chat_id)
                 bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
-                question, answer = generate_question(game.level, game.difficulty)
+                question, answer = generate_question(game.level, game.difficulty_level)
                 game.current_answer = answer
                 game.total_questions += 1
                 game.question_start_time = time.time()
@@ -212,4 +249,4 @@ def hint_handler(message):
 def handle_hint_command(message):
     hint_handler(message)
 
-bot.polling()  
+bot.polling()
