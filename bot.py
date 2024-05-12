@@ -95,7 +95,7 @@ def check_answer(message):
             game.level += 1
         message_text = f"✅ Правильно! Вы получаете {game.level * 10} очков.\n\n"
         message_text += update_game_message(chat_id)
-        bot.reply_to(message, message_text, reply_markup=create_keyboard())
+        bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
         question, answer = generate_question(game.level, game.difficulty)
         game.current_answer = answer
         game.total_questions += 1
@@ -105,12 +105,12 @@ def check_answer(message):
         if game.lives == 0:
             message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
             message_text += f"📊 Итоговая статистика:\n\n➡️ Вопросов отвечено: {game.total_questions}\n🌟 Очки: {game.score}"
-            bot.reply_to(message, message_text, reply_markup=create_keyboard())
+            bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             del games[chat_id]
         else:
             message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
             message_text += update_game_message(chat_id)
-            bot.reply_to(message, message_text, reply_markup=create_keyboard())
+            bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             question, answer = generate_question(game.level, game.difficulty)
             game.current_answer = answer
             game.total_questions += 1
