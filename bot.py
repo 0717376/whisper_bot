@@ -23,37 +23,45 @@ class Game:
         self.hints_used = 0
         self.question_start_time = None
 
-def generate_question(level):
+def generate_question(level, difficulty):
     ops = ['+', '-', '*', '/']
-    if level <= 5:
-        # Однозначные числа, сложение и вычитание
-        a, b = random.randint(1, 9), random.randint(1, 9)
-        op = random.choice(ops[:2])
-    elif level <= 10:
-        # Однозначные числа, умножение и деление
-        a, b = random.randint(1, 9), random.randint(1, 9)
-        op = random.choice(ops[2:])
-    elif level <= 15:
-        # Двузначные числа, сложение и вычитание
-        a, b = random.randint(10, 99), random.randint(10, 99)
-        op = random.choice(ops[:2])
-    elif level <= 20:
-        # Двузначные числа, умножение и деление
-        a, b = random.randint(10, 99), random.randint(10, 99)
-        op = random.choice(ops[2:])
-    else:
-        # Смешанные операции и скобки
-        a, b, c = random.randint(1, 99), random.randint(1, 99), random.randint(1, 99)
-        op1, op2 = random.choice(ops), random.choice(ops)
-        question = f"({a} {op1} {b}) {op2} {c}"
-        answer = eval(question)
-        return question, answer
-
+    if difficulty == 'easy':
+        if level <= 5:
+            a, b = random.randint(1, 10 * level), random.randint(1, 10 * level)
+            op = random.choice(['+', '-'])
+        elif level <= 10:
+            a, b = random.randint(1, 15 * (level - 5)), random.randint(1, 15 * (level - 5))
+            op = random.choice(['+', '-', '*'])
+        else:
+            a, b = random.randint(1, 20 * (level - 10)), random.randint(1, 20 * (level - 10))
+            op = random.choice(ops)
+    elif difficulty == 'medium':
+        if level <= 5:
+            a, b = random.randint(10 * level, 20 * level), random.randint(10 * level, 20 * level)
+            op = random.choice(['+', '-', '*'])
+        elif level <= 10:
+            a, b = random.randint(15 * (level - 5), 30 * (level - 5)), random.randint(15 * (level - 5), 30 * (level - 5))
+            op = random.choice(ops)
+        else:
+            a, b = random.randint(20 * (level - 10), 40 * (level - 10)), random.randint(20 * (level - 10), 40 * (level - 10))
+            op = random.choice(ops)
+            if op == '/':
+                a = a * b
+    else:  # difficulty == 'hard'
+        if level <= 5:
+            a, b = random.randint(20 * level, 40 * level), random.randint(20 * level, 40 * level)
+            op = random.choice(ops)
+        elif level <= 10:
+            a, b = random.randint(30 * (level - 5), 60 * (level - 5)), random.randint(30 * (level - 5), 60 * (level - 5))
+            op = random.choice(ops)
+        else:
+            a, b = random.randint(40 * (level - 10), 80 * (level - 10)), random.randint(40 * (level - 10), 80 * (level - 10))
+            op = random.choice(ops)
+        if op == '/':
+            a = a * b
+    
     question = f"{a} {op} {b}"
     answer = eval(question)
-    if op == '/':
-        a = a * b
-        question = f"{a} {op} {b}"
     return question, answer
 
 def update_game_message(chat_id):
@@ -89,15 +97,16 @@ def set_difficulty(call):
     games[chat_id] = Game(chat_id, difficulty)
     bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=f"Вы выбрали {difficulty} уровень сложности.")
     rules = "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟). Чем быстрее вы отвечаете, тем больше очков получаете.\n- Если вы ошибаетесь или не отвечаете в течение 12 секунд, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать."
-    start_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    start_keyboard.add(KeyboardButton("Начать игру"))
-    bot.send_message(chat_id, rules, reply_markup=start_keyboard)
+    
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("Начать игру", callback_data='start_game'))
+    bot.send_message(chat_id, rules, reply_markup=keyboard)
 
-@bot.message_handler(func=lambda message: message.text == "Начать игру")
-def start_game_questions(message):
-    chat_id = message.chat.id
+@bot.callback_query_handler(func=lambda call: call.data == 'start_game')
+def start_game_questions(call):
+    chat_id = call.message.chat.id
     if chat_id not in games:
-        bot.reply_to(message, "Пожалуйста, выберите уровень сложности с помощью команды /start", reply_markup=ReplyKeyboardRemove())
+        bot.answer_callback_query(callback_query_id=call.id, text="Пожалуйста, выберите уровень сложности с помощью команды /start")
         return
     question, answer = generate_question(games[chat_id].level, games[chat_id].difficulty)
     games[chat_id].current_answer = answer
@@ -147,7 +156,7 @@ def check_answer(message):
         if user_answer == game.current_answer:
             score_multiplier = max(1, int(12 - answer_time))
             game.score += game.level * 10 * score_multiplier
-            if game.total_questions % 5 == 0 and game.level < 25:
+            if game.total_questions % 5 == 0:
                 game.level += 1
             message_text = f"✅ Правильно! Вы получаете {game.level * 10 * score_multiplier} очков.\n\n"
             message_text += update_game_message(chat_id)
@@ -202,4 +211,4 @@ def hint_handler(message):
 def handle_hint_command(message):
     hint_handler(message)
 
-bot.polling() 
+bot.polling()  
