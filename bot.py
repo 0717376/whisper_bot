@@ -20,21 +20,20 @@ class Game:
         self.total_questions = 0
         self.difficulty = difficulty
         self.hints_used = 0
+        self.current_answer = None
 
 def generate_question(level, difficulty):
     ops = ['+', '-', '*']
-    if difficulty == 'easy':
-        a, b = random.randint(1, 2 * level), random.randint(1, 2 * level)
-    elif difficulty == 'medium':
-        a, b = random.randint(2 * level, 4 * level), random.randint(2 * level, 4 * level)
-    else:
-        a, b = random.randint(4 * level, 6 * level), random.randint(4 * level, 6 * level)
     op = random.choice(ops)
+    if difficulty == 'easy':
+        a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
+    elif difficulty == 'medium':
+        a, b = random.randint(5 * level, 10 * level), random.randint(5 * level, 10 * level)
+    else:
+        a, b = random.randint(10 * level, 15 * level), random.randint(10 * level, 15 * level)
+    
     question = f"{a} {op} {b}"
-    answer = eval(question)
-    if op == '/':
-        a = a * b
-        question = f"{a} {op} {b}"
+    answer = eval(question)  # Сохраняем использование eval для простоты
     return question, answer
 
 def update_game_message(chat_id):
@@ -64,17 +63,41 @@ def set_difficulty(call):
     difficulty = call.data
     games[chat_id] = Game(chat_id, difficulty)
     bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=f"Вы выбрали {difficulty} уровень сложности.")
-    rules = "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟).\n- Если вы ошибаетесь, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nДавайте начнем! 😄"
+    rules = (
+        "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n"
+        "- У вас есть 10 жизней (❤️).\n"
+        "- Вам будут даваться случайные примеры по арифметике.\n"
+        "- Сложность примеров будет постепенно увеличиваться.\n"
+        "- За каждый правильный ответ вы получаете очки (🌟).\n"
+        "- Если вы ошибаетесь, то теряете жизнь (❤️).\n"
+        "- Игра заканчивается, когда у вас заканчиваются жизни.\n"
+        "- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\n"
+        "Давайте начнем! 😄"
+    )
     bot.send_message(chat_id, rules, reply_markup=create_keyboard())
-    question, answer = generate_question(games[chat_id].level, games[chat_id].difficulty)
-    games[chat_id].current_answer = answer
-    games[chat_id].total_questions += 1
-    bot.send_message(chat_id, f"❓ Вопрос {games[chat_id].total_questions}:\n{question}")
+    send_new_question(chat_id)
+
+def send_new_question(chat_id):
+    game = games[chat_id]
+    question, answer = generate_question(game.level, game.difficulty)
+    game.current_answer = answer
+    game.total_questions += 1
+    bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}")
 
 @bot.message_handler(commands=['help'])
 def show_help(message):
     chat_id = message.chat.id
-    help_text = "📜 Правила и помощь:\n\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟).\n- Если вы ошибаетесь, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nЕсли у вас возникли вопросы, не стесняйтесь обращаться!"
+    help_text = (
+        "📜 Правила и помощь:\n\n"
+        "- У вас есть 10 жизней (❤️).\n"
+        "- Вам будут даваться случайные примеры по арифметике.\n"
+        "- Сложность примеров будет постепенно увеличиваться.\n"
+        "- За каждый правильный ответ вы получаете очки (🌟).\n"
+        "- Если вы ошибаетесь, то теряете жизнь (❤️).\n"
+        "- Игра заканчивается, когда у вас заканчиваются жизни.\n"
+        "- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\n"
+        "Если у вас возникли вопросы, не стесняйтесь обращаться!"
+    )
     bot.reply_to(message, help_text, reply_markup=create_keyboard())
 
 @bot.message_handler(func=lambda message: True)
@@ -83,22 +106,18 @@ def check_answer(message):
     if chat_id not in games:
         bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start", reply_markup=create_keyboard())
         return
+
     game = games[chat_id]
     try:
         user_answer = int(message.text)
     except ValueError:
         bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
         return
+
     if user_answer == game.current_answer:
         game.score += game.level * 10
         game.level += 1
-        question, answer = generate_question(game.level, game.difficulty)
-        game.current_answer = answer
-        game.total_questions += 1
         message_text = f"✅ Правильно! Вы получаете {game.level * 10} очков.\n\n"
-        message_text += update_game_message(chat_id)
-        message_text += f"\n\n❓ Вопрос {game.total_questions}:\n{question}"
-        bot.reply_to(message, message_text, reply_markup=create_keyboard())
     else:
         game.lives -= 1
         if game.lives == 0:
@@ -106,14 +125,13 @@ def check_answer(message):
             message_text += f"📊 Итоговая статистика:\n\n➡️ Вопросов отвечено: {game.total_questions}\n🌟 Очки: {game.score}"
             bot.reply_to(message, message_text, reply_markup=create_keyboard())
             del games[chat_id]
+            return
         else:
             message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
-            message_text += update_game_message(chat_id)
-            question, answer = generate_question(game.level, game.difficulty)
-            game.current_answer = answer
-            game.total_questions += 1
-            message_text += f"\n\n❓ Вопрос {game.total_questions}:\n{question}"
-            bot.reply_to(message, message_text, reply_markup=create_keyboard())
+
+    message_text += update_game_message(chat_id)
+    send_new_question(chat_id)
+    bot.reply_to(message, message_text, reply_markup=create_keyboard())
 
 @bot.callback_query_handler(func=lambda call: call.data == '/start')
 def start_new_game(call):
@@ -135,13 +153,6 @@ def hint_callback(call):
         bot.answer_callback_query(callback_query_id=call.id, text=f"Подсказка: {game.current_answer}")
     else:
         bot.answer_callback_query(callback_query_id=call.id, text="У вас больше нет подсказок.")
-
-def hint_handler(message):
-    chat_id = message.chat.id
-    if chat_id not in games:
-        bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start")
-        return
-    hint_callback(message)
 
 @bot.message_handler(commands=['hint'])
 def handle_hint_command(message):
