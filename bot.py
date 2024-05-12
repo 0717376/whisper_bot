@@ -93,7 +93,7 @@ def start_game_questions(message):
         return
     send_question(chat_id)
 
-def check_answer(message, user_answer=None):
+def check_answer(message):
     chat_id = message.chat.id
     if chat_id not in games:
         bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start", reply_markup=create_keyboard())
@@ -101,12 +101,11 @@ def check_answer(message, user_answer=None):
     game = games[chat_id]
     answer_time = time.time() - game.question_start_time
     
-    if user_answer is None:
-        try:
-            user_answer = int(message.text)
-        except ValueError:
-            bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
-            return
+    try:
+        user_answer = int(message.text)
+    except ValueError:
+        bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
+        return
 
     if answer_time > 12 or user_answer != game.current_answer:
         game.lives -= 1
@@ -155,6 +154,5 @@ def hint_callback(call):
         bot.answer_callback_query(callback_query_id=call.id, text=f"Подсказка: {game.current_answer}")
     else:
         bot.answer_callback_query(callback_query_id=call.id, text="У вас больше нет подсказок.")
-    check_answer(call.message, game.current_answer)
 
 bot.polling()
