@@ -117,6 +117,11 @@ def check_answer(message):
             message_text = f"{answer_correct} Вы теряете жизнь.\n\nПравильный ответ: {game.current_answer}\n\n"
             message_text += update_game_message(chat_id)
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
+            question, answer = generate_question(game.level, game.difficulty)
+            game.current_answer = answer
+            game.total_questions += 1
+            game.question_start_time = time.time()
+            bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
     else:
         try:
             user_answer = int(message.text)
