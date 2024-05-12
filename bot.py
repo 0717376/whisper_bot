@@ -46,13 +46,12 @@ def update_game_message(chat_id):
     hint_emoji = '💡'
     lives_text = heart_emoji * game.lives
     hints_text = hint_emoji * (3 - game.hints_used)
-    message = f"{lives_text}\n{hints_text}\n🌟 Очки: {game.score}"
+    message = f"{lives_text} {hints_text} 🌟 {game.score}"
     return message
 
 def create_keyboard():
     keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton("Новая игра", callback_data='/start'))
-    keyboard.add(InlineKeyboardButton("Подсказка", callback_data='/hint'))
+    keyboard.row(InlineKeyboardButton("Новая игра", callback_data='/start'), InlineKeyboardButton("Подсказка", callback_data='/hint'))
     return keyboard
 
 @bot.message_handler(commands=['start'])
@@ -95,6 +94,11 @@ def check_answer(message):
         return
     game = games[chat_id]
     answer_time = time.time() - game.question_start_time
+    try:
+        user_answer = int(message.text)
+    except ValueError:
+        bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
+        return
     if answer_time > 12:
         game.lives -= 1
         if game.lives == 0:
@@ -103,7 +107,7 @@ def check_answer(message):
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             del games[chat_id]
         else:
-            message_text = "❌ Время ответа истекло. Вы теряете жизнь.\n\n"
+            message_text = f"❌ Время ответа истекло. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
             message_text += update_game_message(chat_id)
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             question, answer = generate_question(game.level, game.difficulty)
@@ -112,11 +116,6 @@ def check_answer(message):
             game.question_start_time = time.time()
             bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
     else:
-        try:
-            user_answer = int(message.text)
-        except ValueError:
-            bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
-            return
         if user_answer == game.current_answer:
             score_multiplier = max(1, int(12 - answer_time))
             game.score += game.level * 10 * score_multiplier
