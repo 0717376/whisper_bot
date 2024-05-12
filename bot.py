@@ -23,16 +23,32 @@ class Game:
         self.hints_used = 0
         self.question_start_time = None
 
-def generate_question(level, difficulty):
-    ops = ['+', '-', '*']
-    if difficulty == 'easy':
-        a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
-        op = random.choice(['+', '*'])
-    elif difficulty == 'medium':
-        a, b = random.randint(5 * level, 10 * level), random.randint(5 * level, 10 * level)
+def generate_question(level):
+    ops = ['+', '-', '*', '/']
+    if level <= 5:
+        # Однозначные числа, сложение и вычитание
+        a, b = random.randint(1, 9), random.randint(1, 9)
+        op = random.choice(ops[:2])
+    elif level <= 10:
+        # Однозначные числа, умножение и деление
+        a, b = random.randint(1, 9), random.randint(1, 9)
+        op = random.choice(ops[2:])
+    elif level <= 15:
+        # Двузначные числа, сложение и вычитание
+        a, b = random.randint(10, 99), random.randint(10, 99)
+        op = random.choice(ops[:2])
+    elif level <= 20:
+        # Двузначные числа, умножение и деление
+        a, b = random.randint(10, 99), random.randint(10, 99)
+        op = random.choice(ops[2:])
     else:
-        a, b = random.randint(10 * level, 15 * level), random.randint(10 * level, 15 * level)
-        op = random.choice(ops)
+        # Смешанные операции и скобки
+        a, b, c = random.randint(1, 99), random.randint(1, 99), random.randint(1, 99)
+        op1, op2 = random.choice(ops), random.choice(ops)
+        question = f"({a} {op1} {b}) {op2} {c}"
+        answer = eval(question)
+        return question, answer
+
     question = f"{a} {op} {b}"
     answer = eval(question)
     if op == '/':
@@ -131,7 +147,7 @@ def check_answer(message):
         if user_answer == game.current_answer:
             score_multiplier = max(1, int(12 - answer_time))
             game.score += game.level * 10 * score_multiplier
-            if game.total_questions % 5 == 0:
+            if game.total_questions % 5 == 0 and game.level < 25:
                 game.level += 1
             message_text = f"✅ Правильно! Вы получаете {game.level * 10 * score_multiplier} очков.\n\n"
             message_text += update_game_message(chat_id)
