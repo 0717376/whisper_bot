@@ -3,6 +3,7 @@ import random
 from dotenv import load_dotenv
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+import time
 
 load_dotenv()
 
@@ -20,16 +21,18 @@ class Game:
         self.total_questions = 0
         self.difficulty = difficulty
         self.hints_used = 0
+        self.question_start_time = None
 
 def generate_question(level, difficulty):
     ops = ['+', '-', '*']
     if difficulty == 'easy':
         a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
+        op = random.choice(['+', '*'])
     elif difficulty == 'medium':
         a, b = random.randint(5 * level, 10 * level), random.randint(5 * level, 10 * level)
     else:
         a, b = random.randint(10 * level, 15 * level), random.randint(10 * level, 15 * level)
-    op = random.choice(ops)
+        op = random.choice(ops)
     question = f"{a} {op} {b}"
     answer = eval(question)
     if op == '/':
@@ -64,17 +67,18 @@ def set_difficulty(call):
     difficulty = call.data
     games[chat_id] = Game(chat_id, difficulty)
     bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=f"Вы выбрали {difficulty} уровень сложности.")
-    rules = "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟).\n- Если вы ошибаетесь, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nДавайте начнем! 😄"
+    rules = "🔢 Добро пожаловать в арифметическую игру! 🎮\n\n📜 Правила:\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟). Чем быстрее вы отвечаете, тем больше очков получаете.\n- Если вы ошибаетесь или не отвечаете в течение 12 секунд, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nДавайте начнем! 😄"
     bot.send_message(chat_id, rules, reply_markup=create_keyboard())
     question, answer = generate_question(games[chat_id].level, games[chat_id].difficulty)
     games[chat_id].current_answer = answer
     games[chat_id].total_questions += 1
+    games[chat_id].question_start_time = time.time()
     bot.send_message(chat_id, f"❓ Вопрос {games[chat_id].total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
 
 @bot.message_handler(commands=['help'])
 def show_help(message):
     chat_id = message.chat.id
-    help_text = "📜 Правила и помощь:\n\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟).\n- Если вы ошибаетесь, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nЕсли у вас возникли вопросы, не стесняйтесь обращаться!"
+    help_text = "📜 Правила и помощь:\n\n- У вас есть 10 жизней (❤️).\n- Вам будут даваться случайные примеры по арифметике.\n- Сложность примеров будет постепенно увеличиваться.\n- За каждый правильный ответ вы получаете очки (🌟). Чем быстрее вы отвечаете, тем больше очков получаете.\n- Если вы ошибаетесь или не отвечаете в течение 12 секунд, то теряете жизнь (❤️).\n- Игра заканчивается, когда у вас заканчиваются жизни.\n- У вас есть 3 подсказки (💡), которые вы можете использовать.\n\nЕсли у вас возникли вопросы, не стесняйтесь обращаться!"
     bot.reply_to(message, help_text, reply_markup=create_keyboard())
 
 @bot.message_handler(func=lambda message: True)
@@ -84,23 +88,8 @@ def check_answer(message):
         bot.reply_to(message, "Пожалуйста, начните новую игру с помощью команды /start", reply_markup=create_keyboard())
         return
     game = games[chat_id]
-    try:
-        user_answer = int(message.text)
-    except ValueError:
-        bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
-        return
-    if user_answer == game.current_answer:
-        game.score += game.level * 10
-        if game.total_questions % 5 == 0:
-            game.level += 1
-        message_text = f"✅ Правильно! Вы получаете {game.level * 10} очков.\n\n"
-        message_text += update_game_message(chat_id)
-        bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
-        question, answer = generate_question(game.level, game.difficulty)
-        game.current_answer = answer
-        game.total_questions += 1
-        bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
-    else:
+    answer_time = time.time() - game.question_start_time
+    if answer_time > 12:
         game.lives -= 1
         if game.lives == 0:
             message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
@@ -108,13 +97,49 @@ def check_answer(message):
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             del games[chat_id]
         else:
-            message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
+            message_text = "❌ Время ответа истекло. Вы теряете жизнь.\n\n"
             message_text += update_game_message(chat_id)
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
             question, answer = generate_question(game.level, game.difficulty)
             game.current_answer = answer
             game.total_questions += 1
+            game.question_start_time = time.time()
             bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
+    else:
+        try:
+            user_answer = int(message.text)
+        except ValueError:
+            bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
+            return
+        if user_answer == game.current_answer:
+            score_multiplier = max(1, int(12 - answer_time))
+            game.score += game.level * 10 * score_multiplier
+            if game.total_questions % 5 == 0:
+                game.level += 1
+            message_text = f"✅ Правильно! Вы получаете {game.level * 10 * score_multiplier} очков.\n\n"
+            message_text += update_game_message(chat_id)
+            bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
+            question, answer = generate_question(game.level, game.difficulty)
+            game.current_answer = answer
+            game.total_questions += 1
+            game.question_start_time = time.time()
+            bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
+        else:
+            game.lives -= 1
+            if game.lives == 0:
+                message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
+                message_text += f"📊 Итоговая статистика:\n\n➡️ Вопросов отвечено: {game.total_questions}\n🌟 Очки: {game.score}"
+                bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
+                del games[chat_id]
+            else:
+                message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
+                message_text += update_game_message(chat_id)
+                bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
+                question, answer = generate_question(game.level, game.difficulty)
+                game.current_answer = answer
+                game.total_questions += 1
+                game.question_start_time = time.time()
+                bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
 
 @bot.callback_query_handler(func=lambda call: call.data == '/start')
 def start_new_game(call):
