@@ -22,7 +22,6 @@ class Game:
         self.difficulty = difficulty
         self.hints_used = 0
         self.question_start_time = None
-        self.difficulty_level = 1 if difficulty == 'easy' else 2 if difficulty == 'medium' else 3
 
 import random
 
@@ -185,21 +184,10 @@ def check_answer(message):
             game.score += game.level * 10 * score_multiplier
             if game.total_questions % 5 == 0:
                 game.level += 1
-            
-            # Изменение сложности в зависимости от скорости ответа
-            if answer_time < 3:
-                if game.difficulty_level < 3:
-                    game.difficulty_level += 1
-            elif answer_time > 9:
-                if game.difficulty_level > 1:
-                    game.difficulty_level -= 1
-            
-            difficulty_text = 'легкий' if game.difficulty_level == 1 else 'средний' if game.difficulty_level == 2 else 'сложный'
             message_text = f"✅ Правильно! Вы получаете {game.level * 10 * score_multiplier} очков.\n\n"
-            message_text += f"Текущий уровень сложности: {difficulty_text}\n\n"
             message_text += update_game_message(chat_id)
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
-            question, answer = generate_question(game.level, game.difficulty_level)
+            question, answer = generate_question(game.level, game.difficulty)
             game.current_answer = answer
             game.total_questions += 1
             game.question_start_time = time.time()
@@ -215,7 +203,7 @@ def check_answer(message):
                 message_text = f"❌ Неверно. Правильный ответ: {game.current_answer}. Вы теряете жизнь.\n\n"
                 message_text += update_game_message(chat_id)
                 bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
-                question, answer = generate_question(game.level, game.difficulty_level)
+                question, answer = generate_question(game.level, game.difficulty)
                 game.current_answer = answer
                 game.total_questions += 1
                 game.question_start_time = time.time()
@@ -249,4 +237,4 @@ def hint_handler(message):
 def handle_hint_command(message):
     hint_handler(message)
 
-bot.polling()
+bot.polling()   
