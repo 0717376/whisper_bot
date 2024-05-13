@@ -2,7 +2,7 @@ import os
 import random
 from dotenv import load_dotenv
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 import time
 
 load_dotenv()
@@ -22,48 +22,182 @@ class Game:
         self.difficulty = difficulty
         self.hints_used = 0
         self.question_start_time = None
-
-import random
+        self.correct_streak = 0  # добавляем счетчик правильных ответов подряд
 
 def generate_question(level, difficulty):
-    ops = ['+', '-', '*', '/']
     if difficulty == 'easy':
-        if level <= 5:
-            a, b = random.randint(1, 5 * level), random.randint(1, 5 * level)
-            op = '+'
-        elif level <= 10:
-            a, b = random.randint(1, 10 * (level - 5)), random.randint(1, 10 * (level - 5))
-            op = random.choice(['+', '*'])
-        else:
-            a, b = random.randint(1, 15 * (level - 10)), random.randint(1, 15 * (level - 10))
-            op = random.choice(['+', '*'])
+        if level == 1:
+            a, b = random.randint(0, 9), random.randint(0, 9)
+            question = f"{a} + {b}"
+        elif level == 2:
+            a, b = random.randint(0, 9), random.randint(0, 9)
+            while b > a:
+                a, b = random.randint(0, 9), random.randint(0, 9)
+            question = f"{a} - {b}"
+        elif level == 3:
+            a, b = random.randint(10, 20), random.randint(0, 9)
+            while (a % 10 + b) >= 10:
+                a, b = random.randint(10, 20), random.randint(0, 9)
+            question = f"{a} + {b}"
+        elif level == 4:
+            a, b = random.randint(10, 20), random.randint(0, 9)
+            while (a % 10 - b) < 0:
+                a, b = random.randint(10, 20), random.randint(0, 9)
+            question = f"{a} - {b}"
+        elif level == 5:
+            a, b = random.randint(10, 20), random.randint(0, 9)
+            question = f"{a} + {b}"
+        elif level == 6:
+            a, b = random.randint(10, 20), random.randint(0, 9)
+            question = f"{a} - {b}"
+        elif level == 7:
+            a, b = random.randint(1, 5), random.randint(1, 5)
+            question = f"{a} * {b}"
+        elif level == 8:
+            a, b = random.randint(1, 5), random.randint(1, 5)
+            question = f"{a * b} / {b}"
+        elif level == 9:
+            a, b = random.randint(10, 50), random.randint(10, 50)
+            while (a % 10 + b % 10) >= 10:
+                a, b = random.randint(10, 50), random.randint(10, 50)
+            question = f"{a} + {b}"
+        elif level == 10:
+            a, b = random.randint(20, 50), random.randint(10, 20)
+            while (a % 10 - b % 10) < 0:
+                a, b = random.randint(20, 50), random.randint(10, 20)
+            question = f"{a} - {b}"
+        elif level == 11:
+            a, b = random.randint(20, 50), random.randint(10, 50)
+            question = f"{a} + {b}"
+        elif level == 12:
+            a, b = random.randint(30, 70), random.randint(10, 50)
+            question = f"{a} - {b}"
+        elif level == 13:
+            a, b = random.randint(1, 9), random.randint(1, 9)
+            question = f"{a} * {b}"
+        elif level == 14:
+            a, b = random.randint(1, 9), random.randint(1, 9)
+            question = f"{a * b} / {b}"
+        elif level == 15:
+            a, b, c = random.randint(0, 9), random.randint(0, 9), random.randint(0, 9)
+            question = f"{a} + {b} + {c}"
     elif difficulty == 'medium':
-        if level <= 5:
-            a, b = random.randint(1, 10 * level), random.randint(1, 10 * level)
-            op = random.choice(['+', '-'])
-        elif level <= 10:
-            a, b = random.randint(1, 15 * (level - 5)), random.randint(1, 15 * (level - 5))
-            op = random.choice(['+', '-', '*'])
-        else:
-            a, b = random.randint(1, 20 * (level - 10)), random.randint(1, 20 * (level - 10))
-            op = random.choice(ops)
+        if level == 10:
+            a, b = random.randint(20, 50), random.randint(10, 20)
+            while (a % 10 - b % 10) < 0:
+                a, b = random.randint(20, 50), random.randint(10, 20)
+            question = f"{a} - {b}"
+        elif level == 11:
+            a, b = random.randint(20, 50), random.randint(10, 50)
+            question = f"{a} + {b}"
+        elif level == 12:
+            a, b = random.randint(30, 70), random.randint(10, 50)
+            question = f"{a} - {b}"
+        elif level == 13:
+            a, b = random.randint(1, 9), random.randint(1, 9)
+            question = f"{a} * {b}"
+        elif level == 14:
+            a, b = random.randint(1, 9), random.randint(1, 9)
+            question = f"{a * b} / {b}"
+        elif level == 15:
+            a, b, c = random.randint(0, 9), random.randint(0, 9), random.randint(0, 9)
+            question = f"{a} + {b} + {c}"
+        elif level == 16:
+            a, b = random.randint(10, 20), random.randint(0, 9)
+            question = f"{a} + {b}"
+        elif level == 17:
+            a, b = random.randint(10, 20), random.randint(0, 9)
+            question = f"{a} - {b}"
+        elif level == 18:
+            a, b = random.randint(10, 20), random.randint(1, 9)
+            question = f"{a} * {b}"
+        elif level == 19:
+            a, b = random.randint(10, 50), random.randint(1, 9)
+            while a % b != 0:
+                a, b = random.randint(10, 50), random.randint(1, 9)
+            question = f"{a} / {b}"
+        elif level == 20:
+            a, b = random.randint(0, 50), random.randint(0, 50)
+            question = f"{a} + {b}"
+        elif level == 21:
+            a, b = random.randint(0, 50), random.randint(0, 50)
+            while b > a:
+                a, b = random.randint(0, 50), random.randint(0, 50)
+            question = f"{a} - {b}"
+        elif level == 22:
+            a, b, c = random.randint(10, 20), random.randint(10, 20), random.randint(10, 20)
+            question = f"{a} + {b} + {c}"
+        elif level == 23:
+            a, b, c = random.randint(10, 20), random.randint(10, 20), random.randint(10, 20)
+            question = f"{a} - {b} + {c}"
+        elif level == 24:
+            a, b, c = random.randint(10, 30), random.randint(10, 20), random.randint(0, 10)
+            question = f"{a} + {b} - {c}"
+        elif level == 25:
+            a, b = random.randint(0, 10), random.randint(0, 10)
+            question = f"{a} * {b}"
     else:  # difficulty == 'hard'
-        if level <= 5:
-            a, b = random.randint(10 * level, 20 * level), random.randint(10 * level, 20 * level)
-            op = random.choice(['+', '-', '*'])
-        elif level <= 10:
-            a, b = random.randint(15 * (level - 5), 30 * (level - 5)), random.randint(15 * (level - 5), 30 * (level - 5))
-            op = random.choice(ops)
-        else:
-            a, b = random.randint(20 * (level - 10), 40 * (level - 10)), random.randint(20 * (level - 10), 40 * (level - 10))
-            op = random.choice(ops)
-        if op == '/':
-            a = a * b
-    
-    if op == '-' and b > a:
-        a, b = b, a
-    
-    question = f"{a} {op} {b}"
+        if level == 20:
+            a, b = random.randint(0, 50), random.randint(0, 50)
+            question = f"{a} + {b}"
+        elif level == 21:
+            a, b = random.randint(0, 50), random.randint(0, 50)
+            while b > a:
+                a, b = random.randint(0, 50), random.randint(0, 50)
+            question = f"{a} - {b}"
+        elif level == 22:
+            a, b, c = random.randint(10, 20), random.randint(10, 20), random.randint(10, 20)
+            question = f"{a} + {b} + {c}"
+        elif level == 23:
+            a, b, c = random.randint(10, 20), random.randint(10, 20), random.randint(10, 20)
+            question = f"{a} - {b} + {c}"
+        elif level == 24:
+            a, b, c = random.randint(10, 30), random.randint(10, 20), random.randint(0, 10)
+            question = f"{a} + {b} - {c}"
+        elif level == 25:
+            a, b = random.randint(0, 10), random.randint(0, 10)
+            question = f"{a} * {b}"
+        elif level == 26:
+            a, b = random.randint(1, 10), random.randint(1, 10)
+            while a % b != 0:
+                a, b = random.randint(1, 10), random.randint(1, 10)
+            question = f"{a} / {b}"
+        elif level == 27:
+            a, b = random.randint(0, 100), random.randint(0, 100)
+            question = f"{a} + {b}"
+        elif level == 28:
+            a, b = random.randint(0, 100), random.randint(0, 100)
+            while b > a:
+                a, b = random.randint(0, 100), random.randint(0, 100)
+            question = f"{a} - {b}"
+        elif level == 29:
+            a, b = random.randint(1, 20), random.randint(1, 20)
+            question = f"{a} * {b}"
+        elif level == 30:
+            a, b = random.randint(1, 20), random.randint(1, 20)
+            while a % b != 0:
+                a, b = random.randint(1, 20), random.randint(1, 20)
+            question = f"{a} / {b}"
+        elif level == 31:
+            a, b, c = random.randint(0, 100), random.randint(0, 100), random.randint(0, 100)
+            question = f"{a} + {b} - {c}"
+        elif level == 32:
+            a, b = random.randint(10, 20), random.randint(10, 20)
+            question = f"{a} * {b}"
+        elif level == 33:
+            a, b = random.randint(10, 100), random.randint(10, 100)
+            while a % b != 0:
+                a, b = random.randint(10, 100), random.randint(10, 100)
+            question = f"{a} / {b}"
+        elif level == 34:
+            a, b = random.randint(100, 999), random.randint(1, 9)
+            question = f"{a} * {b}"
+        elif level == 35:
+            a, b = random.randint(100, 999), random.randint(1, 9)
+            while a % b != 0:
+                a, b = random.randint(100, 999), random.randint(1, 9)
+            question = f"{a} / {b}"
+
     answer = eval(question)
     return question, answer
 
@@ -127,6 +261,7 @@ def check_answer(message):
     answer_time = time.time() - game.question_start_time
     if answer_time > 12:
         game.lives -= 1
+        game.correct_streak = 0  # сбрасываем счетчик правильных ответов подряд при ошибке или пропуске
         if game.lives == 0:
             message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
             message_text += f"📊 Итоговая статистика:\n\n🌟 Очки: {game.score}"
@@ -157,10 +292,12 @@ def check_answer(message):
             bot.reply_to(message, "Пожалуйста, введите целочисленный ответ.", reply_markup=create_keyboard())
             return
         if user_answer == game.current_answer:
+            game.correct_streak += 1
+            if game.correct_streak == 3:
+                game.level += 1
+                game.correct_streak = 0  # сбрасываем счетчик после перехода на следующий уровень
             score_multiplier = max(1, int(12 - answer_time))
             game.score += game.level * 10 * score_multiplier
-            if game.total_questions % 5 == 0:
-                game.level += 1
             message_text = f"✅ Правильно! Вы получаете {game.level * 10 * score_multiplier} очков.\n\n"
             message_text += update_game_message(chat_id)
             bot.send_message(chat_id, message_text, reply_markup=create_keyboard())
@@ -171,6 +308,7 @@ def check_answer(message):
             bot.send_message(chat_id, f"❓ Вопрос {game.total_questions}:\n{question}", reply_markup=ReplyKeyboardRemove())
         else:
             game.lives -= 1
+            game.correct_streak = 0  # сбрасываем счетчик правильных ответов подряд при ошибке
             if game.lives == 0:
                 message_text = "❌ К сожалению, у вас закончились жизни. Игра окончена.\n\n"
                 message_text += f"📊 Итоговая статистика:\n\n🌟 Очки: {game.score}"
@@ -214,4 +352,4 @@ def hint_handler(message):
 def handle_hint_command(message):
     hint_handler(message)
 
-bot.polling()   
+bot.polling()
