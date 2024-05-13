@@ -17,7 +17,7 @@ class Game:
         self.chat_id = chat_id
         self.lives = 10
         self.score = 0
-        self.level = 1
+        self.level = 1 if difficulty == 'easy' else 10 if difficulty == 'medium' else 20
         self.total_questions = 0
         self.difficulty = difficulty
         self.hints_used = 0
